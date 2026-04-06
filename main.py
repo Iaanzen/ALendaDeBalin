@@ -9,7 +9,8 @@ clock = pygame.time.Clock()
 
 #Personagem
 x, y = 100, 300
-largura, altura = 40, 60
+largura, altura = 40, 50
+tamanho_sprite = 160
 vel_x = 0
 vel_y = 0
 gravidade = 0.5
@@ -48,7 +49,7 @@ npc1 = NPC(400, 360, dialogos=[
     "Sim, farei o serviço",
     "Não posso fazer isso"
 ], respostas =[
-    ["Graças aos Deuses!", "Minha filha está no castelo, cumpra sua missão", "Você será bem recompensado!"],
+    ["Graças aos Deuses!", "Minha filha está dentro de casa, cumpra sua missão", "Você será bem recompensado!"],
     ["Entendo...", "Talvez outro cavaleiro seja capaz de tal tarefa..."]
 ])
 
@@ -80,8 +81,14 @@ plataformas = [
     (0, 420, largura_mapa, 20),
 ]
 
+#Sprites
+sprite_balin = pygame.image.load("sprites/balin/GandalfHardcore Warrior.png").convert_alpha()
 
-
+#FPS
+frame_atual = 0
+contador_frames = 0
+linha_animacao = 0
+frames_por_animacao = {0: 5, 1: 7, 3: 4}
 
 rodando = True
 em_dialogo = False
@@ -127,6 +134,31 @@ while rodando:
             vel_x = velocidade
         else:
             vel_x = 0
+    else:
+        vel_x = 0
+
+    linha_anterior = linha_animacao
+
+    if vel_y < -2:
+        linha_animacao = 3
+    elif vel_x != 0:
+        linha_animacao = 1
+    else:
+        linha_animacao = 0
+
+    if linha_animacao != linha_anterior:
+        frame_atual = 0
+        contador_frames = 0
+
+    if frame_atual >= frames_por_animacao[linha_animacao]:  # ← depois do reset
+        frame_atual = 0
+
+    contador_frames += 1
+    if contador_frames >= 8:
+        contador_frames = 0
+        frame_atual += 1
+        if frame_atual >= frames_por_animacao[linha_animacao]:
+            frame_atual = 0
 
     vel_y += gravidade
     x += vel_x
@@ -162,13 +194,15 @@ while rodando:
 
     if npc1.ver_interacao(rect_balin) and not fim_dialogo:
         em_dialogo = True
-        vel_x = 0
         desenhar_dialogo(tela, npc1.dialogos[npc1.fala_atual])
         if npc1.fala_atual == len(npc1.dialogos) - 1:
             desenhar_escolhas(tela, npc1.escolhas, npc1.escolha_atual)
     else:
         em_dialogo = False
-    pygame.draw.rect(tela, (100, 200, 100), (x - camera_x, y, largura, altura))
+    frame = sprite_balin.subsurface((frame_atual * 80, linha_animacao * 65, 65, 65))
+    frame = pygame.transform.scale(frame, (tamanho_sprite, tamanho_sprite))
+    frame = pygame.transform.flip(frame, True, False)
+    tela.blit(frame, (x - camera_x, y - (tamanho_sprite - altura)))
     npc1.desenhar(tela, camera_x, )
     for plataforma in plataformas:
         pygame.draw.rect(tela, (150, 75, 0), (plataforma[0] - camera_x, plataforma[1], plataforma[2], plataforma[3]))
