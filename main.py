@@ -18,7 +18,7 @@ velocidade = 5
 
 #NPC
 class NPC:
-    def __init__(self, x, y, w=40, h=60, dialogos=[], escolhas=[]):
+    def __init__(self, x, y, w=40, h=60, dialogos=[], escolhas=[], respostas=[]):
         self.x = x
         self.y = y
         self.w = w
@@ -27,6 +27,9 @@ class NPC:
         self.fala_atual = 0
         self.escolhas = escolhas
         self.escolha_atual = 0
+        self.respostas = respostas
+        self.resposta_atual = 0
+
 
     def desenhar(self, tela, camera_x):
         pygame.draw.rect(tela, (100, 200, 100), (self.x - camera_x, self.y, self.w, self.h ))
@@ -44,6 +47,9 @@ npc1 = NPC(400, 360, dialogos=[
 ], escolhas = [
     "Sim, farei o serviço",
     "Não posso fazer isso"
+], respostas =[
+    ["Graças aos Deuses!", "Minha filha está no castelo, cumpra sua missão", "Você será bem recompensado!"],
+    ["Entendo...", "Talvez outro cavaleiro seja capaz de tal tarefa..."]
 ])
 
 #Caixa de diálogo
@@ -60,7 +66,11 @@ def desenhar_escolhas(tela, escolhas, escolha_atual):
         cor = (255, 255, 0) if i == escolha_atual else (255, 255, 255)
         texto_render = fonte.render(escolha, True, (cor))
         tela.blit(texto_render, (20, 370 + i * 35))
-
+def desenhar_resposta(tela, texto):
+    pygame.draw.rect(tela, (100, 200, 255), (0, 300, 800, 200))
+    fonte = pygame.font.SysFont(None, 32)
+    texto_render = fonte.render(texto, True, (255, 255, 255))
+    tela.blit(texto_render, (20, 330))
 
 #mapa
 largura_mapa = 3000
@@ -68,8 +78,6 @@ largura_mapa = 3000
 #Plataformas
 plataformas = [
     (0, 420, largura_mapa, 20),
-    (200, 300, 150, 20),
-    (500, 200, 150, 20),
 ]
 
 
@@ -93,16 +101,22 @@ while rodando:
                     fim_dialogo = False
             if npc1.fala_atual == len(npc1.dialogos) - 1:
                 if evento.key == pygame.K_DOWN:
-                    npc1.escolha_atual += 1
+                    npc1.escolha_atual = (npc1.escolha_atual + 1) % len(npc1.escolhas)
                 if evento.key == pygame.K_UP:
-                    npc1.escolha_atual -= 1
+                    npc1.escolha_atual = (npc1.escolha_atual + 1) % len(npc1.escolhas)
             if evento.key == pygame.K_SPACE:
                 if npc1.fala_atual < len(npc1.dialogos) - 1:
                     npc1.fala_atual += 1
                 else:
-                    npc1.fala_atual = 0
-                    em_dialogo = False
-                    fim_dialogo = True
+                    if npc1.escolhas:
+                        npc1.dialogos = npc1.respostas[npc1.escolha_atual]
+                        npc1.fala_atual = 0
+                        npc1.escolhas = []
+
+                    else:
+                        npc1.fala_atual = 0
+                        em_dialogo = False
+                        fim_dialogo = True
 
     # 2. Atualizar estado
     if not em_dialogo:
