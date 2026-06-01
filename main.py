@@ -49,8 +49,20 @@ npc1 = NPC(400, 360, dialogos=[
     "Sim, farei o serviço",
     "Não posso fazer isso"
 ], respostas =[
-    ["Graças aos Deuses!", "Minha filha está dentro de casa, cumpra sua missão", "Você será bem recompensado!"],
-    ["Entendo...", "Talvez outro cavaleiro seja capaz de tal tarefa..."]
+     ["Graças aos Deuses!", "Minha filha está dentro de casa, cumpra sua missão", "Você será bem recompensado!"],
+     ["Entendo...", "Talvez outro cavaleiro seja capaz de tal tarefa..."]
+])
+
+princesa = NPC(1500, 360, dialogos=[
+    "Espere, cavaleiro! Não me mate!",
+    "Eu não sou um monstro, apenas sofro com essa maldição...",
+    "O que você vai fazer?"
+], escolhas=[
+    "Cumprir o contrato (Matar)",
+    "Esqueça isso, vamos fugir juntos"
+], respostas=[
+    ["Não... por favor...", "*Você a derrota* (+1000 XP / +500 Ouro)"],
+    ["Sério?!", "Eu aceito! Vamos para longe deste reino..."]
 ])
 
 #Caixa de diálogo
@@ -93,37 +105,74 @@ frames_por_animacao = {0: 5, 1: 7, 3: 4}
 rodando = True
 em_dialogo = False
 fim_dialogo = False
+estado_jogo = "jogando"
+missao_aceita = False
+npc_atual = None
 
 while rodando:
-    # 1. Ler eventos
+
     rect_balin = pygame.Rect(x, y, largura, altura)
     # 1. Ler eventos
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             rodando = False
+
         if evento.type == pygame.KEYDOWN:
+            # Pulo (Apenas se NÃO estiver em diálogo)
             if not em_dialogo:
                 if evento.key == pygame.K_UP and no_chao:
                     vel_y = -12
-                    fim_dialogo = False
-            if npc1.fala_atual == len(npc1.dialogos) - 1:
-                if evento.key == pygame.K_DOWN:
-                    npc1.escolha_atual = (npc1.escolha_atual + 1) % len(npc1.escolhas)
-                if evento.key == pygame.K_UP:
-                    npc1.escolha_atual = (npc1.escolha_atual + 1) % len(npc1.escolhas)
-            if evento.key == pygame.K_SPACE:
-                if npc1.fala_atual < len(npc1.dialogos) - 1:
-                    npc1.fala_atual += 1
-                else:
-                    if npc1.escolhas:
-                        npc1.dialogos = npc1.respostas[npc1.escolha_atual]
-                        npc1.fala_atual = 0
-                        npc1.escolhas = []
 
+            # Movimentação nas escolhas (Apenas se ESTIVER em diálogo)
+            if em_dialogo and npc_atual:
+                if npc_atual.fala_atual == len(npc_atual.dialogos) - 1:
+                    if len(npc_atual.escolhas) > 0:
+                        if evento.key == pygame.K_DOWN:
+                            npc_atual.escolha_atual = (npc_atual.escolha_atual + 1) % len(npc_atual.escolhas)
+                        if evento.key == pygame.K_UP:
+                            npc_atual.escolha_atual = (npc_atual.escolha_atual - 1) % len(npc_atual.escolhas)
+
+                # --- AVANÇAR DIÁLOGO / CONFIRMAR (ESPAÇO) ---
+                if evento.key == pygame.K_SPACE:
+                    if npc_atual.fala_atual < len(npc_atual.dialogos) - 1:
+                        npc_atual.fala_atual += 1
                     else:
-                        npc1.fala_atual = 0
-                        em_dialogo = False
-                        fim_dialogo = True
+                        # Se o diálogo tem escolhas na tela
+                        if npc_atual.escolhas:
+                            # Se for o PAI (npc1), salvamos se a missão foi aceita
+                            if npc_atual == npc1:
+                                if npc_atual.escolha_atual == 0:
+                                    missao_aceita = True
+                                else:
+                                    missao_aceita = False
+
+                            # Aplica os textos de resposta do NPC correspondente
+                            npc_atual.dialogos = npc_atual.respostas[npc_atual.escolha_atual]
+                            npc_atual.fala_atual = 0
+                            npc_atual.escolhas = []
+                        else:
+                            # O diálogo de RESPOSTA terminou de verdade aqui!
+                            npc_atual.fala_atual = 0
+                            em_dialogo = False
+
+                            # --- GATILHOS DOS FINAIS ---
+                            if npc_atual == npc1:
+                                fim_dialogo = True  # Trava o pai para não falar de novo
+
+                                princesa.fala_atual = 0
+                                princesa.escolha_atual = 0
+
+                                if not missao_aceita:
+                                    estado_jogo = "fim_recusou"
+
+                            elif npc_atual == princesa:
+                                # Se a escolha final guardada na princesa foi a 0 (Matar)
+                                if princesa.escolha_atual == 0:
+                                    estado_jogo = "fim_matou"
+                                else:
+                                    estado_jogo = "fim_amor"
+
+                            npc_atual = None
 
     # 2. Atualizar estado
     if not em_dialogo:
@@ -190,24 +239,60 @@ while rodando:
 
     # 3. Desenhar tela
     camera_x = x - 400
-    tela.fill((30, 30, 30))  # fundo cinza escuro
+    if estado_jogo == "jogando":
+        tela.fill((30, 30, 30))  # fundo cinza escuro
 
-    if npc1.ver_interacao(rect_balin) and not fim_dialogo:
-        em_dialogo = True
-        desenhar_dialogo(tela, npc1.dialogos[npc1.fala_atual])
-        if npc1.fala_atual == len(npc1.dialogos) - 1:
-            desenhar_escolhas(tela, npc1.escolhas, npc1.escolha_atual)
-    else:
-        em_dialogo = False
-    frame = sprite_balin.subsurface((frame_atual * 80, linha_animacao * 65, 65, 65))
-    frame = pygame.transform.scale(frame, (tamanho_sprite, tamanho_sprite))
-    frame = pygame.transform.flip(frame, True, False)
-    tela.blit(frame, (x - camera_x, y - (tamanho_sprite - altura)))
-    npc1.desenhar(tela, camera_x, )
-    for plataforma in plataformas:
-        pygame.draw.rect(tela, (150, 75, 0), (plataforma[0] - camera_x, plataforma[1], plataforma[2], plataforma[3]))
+        if npc1.ver_interacao(rect_balin) and not fim_dialogo:
+            em_dialogo = True
+            npc_atual = npc1
+        elif missao_aceita and princesa.ver_interacao(rect_balin) and not princesa.resposta_atual == -1:
+            em_dialogo = True
+            npc_atual = princesa
+        else:
+            em_dialogo = False
+            npc_atual = None
+        if em_dialogo and npc_atual is not None:
+            desenhar_dialogo(tela, npc_atual.dialogos[npc_atual.fala_atual])
+            if npc_atual.fala_atual == len(npc_atual.dialogos) - 1:
+                desenhar_escolhas(tela, npc_atual.escolhas, npc_atual.escolha_atual)
+
+        frame = sprite_balin.subsurface((frame_atual * 80, linha_animacao * 65, 65, 65))
+        frame = pygame.transform.scale(frame, (tamanho_sprite, tamanho_sprite))
+        frame = pygame.transform.flip(frame, True, False)
+        tela.blit(frame, (x - camera_x, y - (tamanho_sprite - altura)))
+        npc1.desenhar(tela, camera_x, )
+        if missao_aceita:
+            princesa.desenhar(tela, camera_x)
+        for plataforma in plataformas:
+            pygame.draw.rect(tela, (150, 75, 0), (plataforma[0] - camera_x, plataforma[1], plataforma[2], plataforma[3]))
+
+    elif estado_jogo == "fim_recusou":
+        tela.fill((0,0,0))
+        fonte = pygame.font.SysFont(None, 35)
+        texto_linha1 = fonte.render("FIM DE JOGO", True, (255, 0, 0))  # Vermelho
+        texto_linha2 = fonte.render("Você recusou a missão e seguiu para sua próxima aventura.", True, (255, 255, 255))  # Branco
+        tela.blit(texto_linha1, (320, 180))
+        tela.blit(texto_linha2, (60, 240))
+
+    elif estado_jogo == "fim_matou":
+        tela.fill((0, 0, 0))
+        fonte = pygame.font.SysFont(None, 35)
+        texto_linha1 = fonte.render("FIM: O MERCENÁRIO", True, (255, 215, 0))  # Dourado
+        texto_linha2 = fonte.render("Você derrotou a princesa! Ganhou +1000 XP e +500 Ouro.", True,(255, 255, 255))
+        texto_linha3 = fonte.render("Mas e se ela não estivesse amaldiçoada?", True,(255, 255, 255))
+        tela.blit(texto_linha1, (280, 180))
+        tela.blit(texto_linha2, (70, 240))
+        tela.blit(texto_linha3, (160, 280))
+
+    elif estado_jogo == "fim_amor":
+        tela.fill((20, 10, 20))  # Um fundo levemente roxo/romântico
+        fonte = pygame.font.SysFont(None, 30)
+        texto_linha1 = fonte.render("FIM: AMOR PROIBIDO", True, (255, 105, 180))  # Rosa
+        texto_linha2 = fonte.render("Você poupou a Princesa. Vocês fugiram juntos para viver uma nova vida.", True,(255, 255, 255))
+        tela.blit(texto_linha1, (280, 180))
+        tela.blit(texto_linha2, (45, 240))
+
     pygame.display.flip()
-
     clock.tick(60)  # limita a 60 frames por segundo
 
 pygame.quit()
