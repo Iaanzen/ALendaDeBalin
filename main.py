@@ -304,7 +304,7 @@ while rodando:
                     # Reseta a Princesa
                     princesa.dialogos = [
                         "Espere, cavaleiro! Não me mate!",
-                        "Eu não sou um monstro, apenas sofro com essa maldição...",
+                        "Eu não sou um monstro, eles estão mentindo...",
                         "O que você vai fazer?"
                     ]
                     princesa.escolhas = ["Cumprir o contrato (Matar)", "Esqueça isso, vamos fugir juntos"]
@@ -421,16 +421,17 @@ while rodando:
         fonte = pygame.font.SysFont(None, 35)
         texto_linha1 = fonte.render("FIM: O MERCENÁRIO", True, (255, 215, 0))  # Dourado
         texto_linha2 = fonte.render("Você derrotou a princesa! Ganhou +1000 XP e +500 Ouro.", True, (255, 255, 255))
+        texto_linha3 = fonte.render("Mas e se ela não estivesse amaldiçoada?", True, (255, 255, 255))
         tela.blit(texto_linha1, (280, 180))
         tela.blit(texto_linha2, (70, 240))
+        tela.blit(texto_linha3, (170, 300))
         desenhar_botao_reiniciar(tela)
 
     elif estado_jogo == "fim_amor":
         tela.fill((20, 10, 20))  # Um fundo levemente roxo/romântico
         fonte = pygame.font.SysFont(None, 30)
         texto_linha1 = fonte.render("FIM: AMOR PROIBIDO", True, (255, 105, 180))  # Rosa
-        texto_linha2 = fonte.render("Você poupou a Princesa. Vocês fugiram juntos para viver uma nova vida.", True,
-                                    (255, 255, 255))
+        texto_linha2 = fonte.render("Você poupou a Princesa. Vocês fugiram juntos para viver uma nova vida.", True,(255, 255, 255))
         tela.blit(texto_linha1, (280, 180))
         tela.blit(texto_linha2, (45, 240))
         desenhar_botao_reiniciar(tela)
